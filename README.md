@@ -50,7 +50,19 @@ Para adaptar el template a tu nueva app, modifica únicamente 3 archivos clave:
 3. **`package.json`**:
    Actualiza el `name`, `description` y la versión inicial (`1.0.0`).
 
-### 3. Configurar Permisos en GitHub Actions ⚠️ *(Paso Crítico)*
+### 3. Generar Iconos y Splash Screens Nativos desde el Día 1 🎨
+Para evitar que tu app se compile con el icono y splash screen de Android por defecto:
+1. Coloca tu logotipo o iconos en la carpeta `assets/` (el template ya incluye placeholders listos):
+   - `assets/icon-only.png` (1024x1024)
+   - `assets/icon-foreground.png` y `assets/icon-background.png` (1024x1024)
+   - `assets/splash.png` y `assets/splash-dark.png` (2732x2732)
+2. Ejecuta el generador nativo:
+   ```bash
+   npm run assets:generate
+   ```
+   *Esto generará automáticamente todas las densidades de iconos adaptativos (`mipmap-*`) y splash screens (`drawable-*`) en Android e iOS.*
+
+### 4. Configurar Permisos en GitHub Actions ⚠️ *(Paso Crítico)*
 Para que el pipeline de CI/CD pueda crear GitHub Releases y subir los archivos `dist.zip` y `app-debug.apk`:
 
 1. Ve a tu repositorio en GitHub: **Settings** > **Actions** > **General**.
@@ -100,6 +112,7 @@ Capgo cuenta con un mecanismo que **revierte automáticamente al bundle anterior
 | `npm run dev` | Inicia el servidor de desarrollo local de Astro (`http://localhost:4321`) |
 | `npm run build` | Compila el frontend estático SPA a la carpeta `dist/` |
 | `npm run bundle:ota` | Compila y genera el archivo comprimido `dist.zip` para OTA |
+| `npm run assets:generate` | Genera todos los iconos adaptativos y splash screens en `android/` y `ios/` |
 | `npm run cap:sync` | Compila el frontend y sincroniza los cambios con las carpetas nativas |
 | `npm run cap:open:android` | Abre el proyecto en Android Studio |
 | `npm run cap:open:ios` | Abre el proyecto en Xcode (requiere macOS) |
@@ -109,10 +122,43 @@ Capgo cuenta con un mecanismo que **revierte automáticamente al bundle anterior
 
 ---
 
+## 🚀 Cómo Publicar una Actualización OTA en Segundos
+
+Para enviar una actualización instantánea a todos los usuarios sin pasar por revisión de Google Play o App Store:
+
+1. Realiza tus cambios en el código (`src/components/`, `src/lib/`, estilos, etc.).
+2. Incrementa la versión:
+   ```bash
+   npm version patch   # O usa: npm run bump:patch
+   ```
+3. Sube los cambios a GitHub:
+   ```bash
+   git add .
+   git commit -m "feat: nueva mejora en la aplicación"
+   git push origin main
+   ```
+4. **Automático:** GitHub Actions compilará `dist.zip`, creará el Release con la nueva versión y el Cloudflare Worker distribuirá la actualización a todos los dispositivos en segundo plano.
+
+---
+
+## ⚖️ Distinción Clave: ¿Cambio OTA o Nuevo APK/IPA?
+
+| Tipo de Modificación | ¿Viaja por OTA? | ¿Requiere Compilar Nuevo APK/IPA? |
+| :--- | :---: | :---: |
+| Pantallas, componentes Svelte, lógica JavaScript, CSS | ✅ **SÍ (Instantáneo)** | ❌ No |
+| Nuevas imágenes o assets web en `public/` o `src/` | ✅ **SÍ (Instantáneo)** | ❌ No |
+| Modificación de Iconos de Launcher (`assets/`) o Splash nativo | ❌ No | ✅ **SÍ (Obligatorio)** |
+| Nuevos plugins nativos de Capacitor (`npm i @capacitor/...`) | ❌ No | ✅ **SÍ (Obligatorio)** |
+| Permisos de Android en `AndroidManifest.xml` o iOS `Info.plist` | ❌ No | ✅ **SÍ (Obligatorio)** |
+| Configuraciones en `capacitor.config.ts` (`appId`, splash background) | ❌ No | ✅ **SÍ (Obligatorio)** |
+
+---
+
 ## 🏷️ Visualización de Versión y Diagnóstico OTA en la App
 
-El template incluye el componente reactivo [`src/components/VersionBadge.svelte`](file:///d:/Proyectos/Personal/Mobile-dev-template/src/components/VersionBadge.svelte) que expone la versión sin invadir la experiencia de usuario:
+El template incluye el componente reactivo [`src/components/VersionBadge.svelte`](file:///d:/Proyectos/Personal/Mobile-dev-template/src/components/VersionBadge.svelte) y el store reactivo `appVersion` desde `src/lib/otaUpdater.js`:
 
+- **Store Reactivo `appVersion`:** Puedes suscribirte en cualquier componente Svelte con `$appVersion` para obtener la versión activa actual en tiempo real.
 - **Modo `chip`:** Píldora sutil con indicador de estado (verde para versión al día, pulso para actualización lista) en cabeceras o toolbars.
 - **Modo `footer`:** Texto discreto en el pie de página de las pantallas (`v1.0.0 (OTA) • Tocar para info`).
 - **Modal de Diagnóstico:** Al pulsar sobre el badge, el usuario o tester puede ver si el código activo proviene de un bundle OTA o del binario base instalado, además de forzar una comprobación manual inmediata.

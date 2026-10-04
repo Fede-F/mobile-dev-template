@@ -1,6 +1,21 @@
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { App } from '@capacitor/app';
+import { writable } from 'svelte/store';
+
+/**
+ * Build-time version fallback
+ */
+const initialBuildVersion = typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_APP_VERSION
+  ? import.meta.env.PUBLIC_APP_VERSION
+  : '1.0.0';
+
+/**
+ * Reactive Svelte store containing the active version string (e.g. "1.0.0").
+ * Automatically updates when an OTA bundle is detected or applied.
+ * Compatible with Svelte auto-subscriptions ($appVersion).
+ */
+export const appVersion = writable(initialBuildVersion);
 
 /**
  * @typedef {Object} OtaConfig
@@ -124,10 +139,12 @@ export async function getAppVersionInfo() {
     // Keep buildVersion fallback
   }
 
+  let resolvedInfo;
+
   try {
     const current = await CapacitorUpdater.current();
     if (current && current.bundle && current.bundle.id && current.bundle.id !== 'default') {
-      return {
+      resolvedInfo = {
         version: current.bundle.id,
         isOta: true,
         channel: 'ota',
@@ -140,14 +157,29 @@ export async function getAppVersionInfo() {
     // Fallback if current() throws
   }
 
-  return {
-    version: nativeVersion,
-    isOta: false,
-    channel: 'native',
-    bundleId: 'default',
-    nativeVersion,
-    formatted: `v${nativeVersion} (Base)`
-  };
+  if (!resolvedInfo) {
+    resolvedInfo = {
+      version: nativeVersion,
+      isOta: false,
+      channel: 'native',
+      bundleId: 'default',
+      nativeVersion,
+      formatted: `v${nativeVersion} (Base)`
+    };
+  }
+
+  // Synchronize reactive Svelte store
+  appVersion.set(resolvedInfo.version);
+  return resolvedInfo;
+}
+
+/**
+ * Manually forces a refresh of appVersion store
+ * @returns {Promise<string>}
+ */
+export async function refreshAppVersion() {
+  const info = await getAppVersionInfo();
+  return info.version;
 }
 
 /**

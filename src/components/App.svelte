@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import {
+    appVersion,
     notifyAppReady,
     checkForOtaUpdates,
     subscribeOtaState,

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mobile Starter</string>
+    <string name="title_activity_main">Mobile Starter</string>
+    <string name="package_name">com.template.mobiledev</string>
+    <string name="custom_url_scheme">com.template.mobiledev</string>
+</resources>

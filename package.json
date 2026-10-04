@@ -15,6 +15,8 @@
     "cap:add:android": "cap add android",
     "cap:add:ios": "cap add ios",
     "bundle:ota": "npm run build && node scripts/bundle-ota.js",
+    "assets:generate": "capacitor-assets generate --android --ios --assetPath assets",
+    "assets:placeholders": "node scripts/create-placeholder-assets.js",
     "bump:patch": "npm version patch --no-git-tag-version",
     "bump:minor": "npm version minor --no-git-tag-version",
     "bump:major": "npm version major --no-git-tag-version"
@@ -36,6 +38,7 @@
     "tailwindcss": "^4.0.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.0.0",
     "archiver": "^7.0.1",
     "typescript": "^5.7.0"

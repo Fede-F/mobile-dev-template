@@ -7,4 +7,5 @@ Por favor, consulta [`AGENTS.md`](./AGENTS.md) para conocer en detalle:
 2. **Ciclo de Vida OTA:** Regla crítica de `notifyAppReady()` en montaje inicial para evitar rollbacks automáticos.
 3. **Frontera de Despliegue:** Qué cambios aplican por OTA (`src/`) y qué cambios requieren compilar un nuevo binario APK/IPA (plugins de Capacitor, permisos nativos, `capacitor.config.ts`).
 4. **Directrices Móviles UX/UI:** Safe-areas (`.pt-safe`, `.pb-safe`), tamaño táctil de 48px (`.touch-target`), haptics (`@capacitor/haptics`) y estados de pulsación activa.
-5. **Automatización CI/CD:** Versionado semántico en `package.json` y publicación en GitHub Actions.
+5. **Generación de Iconos Nativos:** `@capacitor/assets` genera automáticamente iconos adaptativos y splash screens en `android/app/src/main/res/` corriendo `npm run assets:generate`.
+6. **Automatización CI/CD:** Publicar OTA ejecutando `npm version patch` y `git push origin main`.

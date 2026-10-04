@@ -70,14 +70,16 @@ Cuando planifiques o realices cambios en el código, distingue estrictamente la 
 | :--- | :---: | :---: |
 | Modificaciones en `src/**/*.svelte`, `src/**/*.js`, `src/**/*.css` | ✅ **SÍ (Instantáneo)** | ❌ No |
 | Nuevas vistas, lógica de negocio, fixes de UI, textos | ✅ **SÍ (Instantáneo)** | ❌ No |
-| Imágenes, iconos o assets en `public/` o `src/assets/` | ✅ **SÍ (Instantáneo)** | ❌ No |
+| Imágenes o assets web en `public/` o `src/assets/` | ✅ **SÍ (Instantáneo)** | ❌ No |
+| Cambios en iconos de launcher (`assets/`, `mipmap-*`) o Splash Screen nativo | ❌ No | ✅ **SÍ (Obligatorio)** |
 | Instalación de nuevos plugins Capacitor (`npm i @capacitor/...`) | ❌ No | ✅ **SÍ (Obligatorio)** |
 | Cambios en código nativo Java/Kotlin (`android/`) o Swift (`ios/`) | ❌ No | ✅ **SÍ (Obligatorio)** |
 | Modificaciones en permisos de `AndroidManifest.xml` o `Info.plist` | ❌ No | ✅ **SÍ (Obligatorio)** |
 | Modificaciones en `capacitor.config.ts` (appId, scheme, native splash) | ❌ No | ✅ **SÍ (Obligatorio)** |
 
 > [!CAUTION]
-> Si añades un nuevo plugin nativo de Capacitor y solo publicas una actualización OTA, los usuarios que tengan el APK viejo sufrirán un crash o error de `Plugin not implemented`. En ese caso, debes compilar y distribuir una nueva versión del APK.
+> 1. Si añades un nuevo plugin nativo de Capacitor y solo publicas una actualización OTA, los usuarios que tengan el APK viejo sufrirán un crash de `Plugin not implemented`.
+> 2. Si cambias los iconos de la app en `assets/` y corres `npm run assets:generate`, estos reemplazan los archivos compilados en `android/app/src/main/res/`. El sistema operativo Android solo lee estos iconos al instalar o actualizar el APK. Por lo tanto, ¡los iconos no cambian por OTA! En ese caso, debes compilar y distribuir un nuevo APK.
 
 ---
 
@@ -106,12 +108,18 @@ Cualquier pantalla o componente nuevo debe seguir estas directrices móviles inq
 
 ## 🏷️ 5. Flujo de Versionado para CI/CD
 
-El pipeline `.github/workflows/mobile_build.yml` lee la versión de `package.json`:
+### 🚀 Regla de Oro: Cómo Publicar una Actualización OTA
+Para lanzar una actualización instantánea Over-The-Air que llegue a todos los dispositivos instalados sin pasar por las tiendas:
 
-1. Para lanzar una nueva versión (OTA y APK), incrementa la versión en `package.json`:
-   - Parche: `npm run bump:patch` (ej: 1.0.0 ➔ 1.0.1)
-   - Menor: `npm run bump:minor` (ej: 1.0.0 ➔ 1.1.0)
-   - Mayor: `npm run bump:major` (ej: 1.0.0 ➔ 2.0.0)
-2. Haz commit y push a la rama `main`.
-3. GitHub Actions compilará automáticamente el proyecto, empaquetará `dist.zip`, compilará `app-debug.apk` y publicará el GitHub Release con el tag `v<version>`.
-4. El Cloudflare Worker detectará el release y comenzará a servir `dist.zip` a todos los dispositivos instalados.
+1. Modifica tu código en `src/` (Svelte, JS, CSS, assets).
+2. Incrementa la versión en `package.json`:
+   ```bash
+   npm version patch   # O usa el alias: npm run bump:patch
+   ```
+3. Realiza commit y push a la rama `main`:
+   ```bash
+   git add .
+   git commit -m "fix: mi nueva mejora en la app"
+   git push origin main
+   ```
+4. **Eso es todo:** GitHub Actions compilará automáticamente el proyecto, creará `dist.zip` y publicará el GitHub Release con el tag `v<version>`. El Cloudflare Worker multi-tenant detectará el nuevo release y los usuarios recibirán la actualización en segundo plano.

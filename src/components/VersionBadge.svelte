@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import {
+    appVersion,
     getAppVersionInfo,
     subscribeOtaState,
     checkForOtaUpdates,
@@ -90,7 +91,7 @@
     {:else}
       <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
     {/if}
-    <span class="font-mono">{versionInfo.formatted}</span>
+    <span class="font-mono">v{$appVersion}{versionInfo.isOta ? ' (OTA)' : ''}</span>
   </button>
 
 {:else if variant === 'footer'}
@@ -101,11 +102,14 @@
       onclick={openDetails}
       class="inline-flex items-center gap-2 text-[11px] text-slate-500 hover:text-slate-400 active-press transition-colors px-3 py-1 rounded-lg"
     >
-      <span class="font-mono tracking-tight">{versionInfo.formatted}</span>
+      <span class="font-mono tracking-tight font-semibold text-slate-400">v{$appVersion}</span>
+      {#if versionInfo.isOta}
+        <span class="px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 text-[9px] font-bold">OTA</span>
+      {/if}
       <span class="text-slate-600">•</span>
       <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Tocar para info</span>
       {#if otaState.updateReadyToApply}
-        <span class="px-1.5 py-0.2 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] font-bold">
+        <span class="px-1.5 py-0.5 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] font-bold">
           Actualización Lista
         </span>
       {/if}
@@ -119,7 +123,7 @@
     onclick={openDetails}
     class="text-[11px] font-mono text-slate-400 hover:text-cyan-400 active-press transition-colors inline-flex items-center gap-1 {customClass}"
   >
-    <span>{versionInfo.formatted}</span>
+    <span>v{$appVersion}</span>
     {#if versionInfo.isOta}
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
     {/if}
