@@ -109,6 +109,16 @@ Capgo cuenta con un mecanismo que **revierte automáticamente al bundle anterior
 
 ---
 
+## 🏷️ Visualización de Versión y Diagnóstico OTA en la App
+
+El template incluye el componente reactivo [`src/components/VersionBadge.svelte`](file:///d:/Proyectos/Personal/Mobile-dev-template/src/components/VersionBadge.svelte) que expone la versión sin invadir la experiencia de usuario:
+
+- **Modo `chip`:** Píldora sutil con indicador de estado (verde para versión al día, pulso para actualización lista) en cabeceras o toolbars.
+- **Modo `footer`:** Texto discreto en el pie de página de las pantallas (`v1.0.0 (OTA) • Tocar para info`).
+- **Modal de Diagnóstico:** Al pulsar sobre el badge, el usuario o tester puede ver si el código activo proviene de un bundle OTA o del binario base instalado, además de forzar una comprobación manual inmediata.
+
+---
+
 ## 📱 Probar en un Dispositivo Android Local
 
 1. Asegúrate de tener instalado **Android Studio** con Android SDK y Java JDK 21 o 17.

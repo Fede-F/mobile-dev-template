@@ -91,29 +91,72 @@ export async function notifyAppReady() {
 }
 
 /**
- * Resolves current running app version (Capacitor bundle or native App info)
- * @returns {Promise<string>}
+ * Resolves comprehensive version metadata (distinguishing Native vs OTA bundle vs Web)
+ * @returns {Promise<{
+ *   version: string,
+ *   isOta: boolean,
+ *   channel: 'ota' | 'native' | 'web',
+ *   bundleId: string | null,
+ *   nativeVersion?: string,
+ *   formatted: string
+ * }>}
  */
-export async function getCurrentAppVersion() {
+export async function getAppVersionInfo() {
+  const buildVersion = import.meta.env?.PUBLIC_APP_VERSION || '1.0.0';
+
   if (!Capacitor.isNativePlatform()) {
-    return '1.0.0-dev';
+    return {
+      version: buildVersion,
+      isOta: false,
+      channel: 'web',
+      bundleId: null,
+      formatted: `v${buildVersion} (Web)`
+    };
+  }
+
+  let nativeVersion = buildVersion;
+  try {
+    const appInfo = await App.getInfo();
+    if (appInfo && appInfo.version) {
+      nativeVersion = appInfo.version;
+    }
+  } catch {
+    // Keep buildVersion fallback
   }
 
   try {
     const current = await CapacitorUpdater.current();
-    if (current && current.bundle && current.bundle.id) {
-      return current.bundle.id;
+    if (current && current.bundle && current.bundle.id && current.bundle.id !== 'default') {
+      return {
+        version: current.bundle.id,
+        isOta: true,
+        channel: 'ota',
+        bundleId: current.bundle.id,
+        nativeVersion,
+        formatted: `v${current.bundle.id} (OTA)`
+      };
     }
   } catch {
-    // Fallback if current() returns undefined or fails
+    // Fallback if current() throws
   }
 
-  try {
-    const appInfo = await App.getInfo();
-    return appInfo.version || '1.0.0';
-  } catch {
-    return '1.0.0';
-  }
+  return {
+    version: nativeVersion,
+    isOta: false,
+    channel: 'native',
+    bundleId: 'default',
+    nativeVersion,
+    formatted: `v${nativeVersion} (Base)`
+  };
+}
+
+/**
+ * Resolves current running app version string
+ * @returns {Promise<string>}
+ */
+export async function getCurrentAppVersion() {
+  const info = await getAppVersionInfo();
+  return info.version;
 }
 
 /**

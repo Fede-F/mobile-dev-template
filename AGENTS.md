@@ -22,7 +22,8 @@ El proyecto es una **aplicación móvil híbrida de alto rendimiento** empaqueta
 │   └── bundle-ota.js       # Empaqueta dist/ en dist.zip con compresión máxima
 ├── src/
 │   ├── components/         # Componentes reactivos en Svelte 5
-│   │   └── App.svelte      # Contenedor raíz y navegación móvil
+│   │   ├── App.svelte      # Contenedor raíz y navegación móvil
+│   │   └── VersionBadge.svelte # Indicador de versión no invasivo (chip/footer)
 │   ├── lib/                # Módulos agnósticos y servicios
 │   │   ├── otaUpdater.js   # Cliente OTA desacoplado para Capgo y Worker
 │   │   └── haptics.js      # Helpers para vibración háptica nativa
@@ -30,7 +31,7 @@ El proyecto es una **aplicación móvil híbrida de alto rendimiento** empaqueta
 │   │   └── index.astro     # Punto de entrada HTML móvil con safe-areas
 │   └── styles/
 │       └── global.css      # Variables de safe-area, utilidades táctiles y glassmorphism
-├── astro.config.mjs        # Configuración Astro + Vite Tailwind v4
+├── astro.config.mjs        # Configuración Astro + Vite Tailwind v4 + Version injection
 ├── capacitor.config.ts     # Configuración Capacitor y plugins Capgo
 ├── package.json            # Scripts de compilación y dependencias
 └── svelte.config.js        # Preprocesador para Svelte 5
@@ -52,6 +53,12 @@ El proyecto es una **aplicación móvil híbrida de alto rendimiento** empaqueta
 3. Si el worker indica que hay un release superior en GitHub, Capgo descarga el archivo `dist.zip`.
 4. El paquete se instala con `CapacitorUpdater.set()`.
 5. Gracias a la configuración `resetWhenUpdate: false` en `capacitor.config.ts`, la experiencia del usuario no se interrumpe; el nuevo código se activará en la siguiente apertura o cuando el usuario pulse "Reiniciar".
+
+### 🏷️ Visualización de Versión en la UI (No Invasiva)
+Para auditar la versión activa sin perjudicar la UX ni confundir al usuario final:
+- Usa el componente `<VersionBadge variant="chip" />` (para la barra superior o cabecera) o `<VersionBadge variant="footer" />` (pie de página sutil con scroll).
+- La versión inyectada en compilación (`__APP_VERSION__` / `import.meta.env.PUBLIC_APP_VERSION`) y el runtime nativo se resuelven a través de `getAppVersionInfo()` en `src/lib/otaUpdater.js`, distinguiendo bundles OTA (`v1.0.1 (OTA)`) vs binario nativo base (`v1.0.0 (Base)`).
+- Al pulsar el badge, se dispara retroalimentación háptica y se despliega un diálogo de diagnóstico con opción de comprobación manual.
 
 ---
 

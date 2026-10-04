@@ -17,6 +17,7 @@
     hapticWarning,
     hapticSelection
   } from '../lib/haptics.js';
+  import VersionBadge from './VersionBadge.svelte';
 
   // Svelte 5 Runes for reactive state
   let currentTab = $state('dashboard');
@@ -99,19 +100,8 @@
       </div>
     </div>
 
-    <!-- OTA Status Indicator Chip -->
-    <div class="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold glass-card border border-slate-700/60">
-      {#if otaState.status === 'downloading'}
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-        <span class="text-amber-300 text-[11px]">Descargando OTA</span>
-      {:else if otaState.updateReadyToApply}
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-emerald-300 text-[11px]">OTA Lista</span>
-      {:else}
-        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-        <span class="text-slate-300 text-[11px]">v{currentVersion}</span>
-      {/if}
-    </div>
+    <!-- Non-invasive Version & OTA Status Chip -->
+    <VersionBadge variant="chip" />
   </header>
 
   <!-- Notification Banner if Update Ready -->
@@ -318,6 +308,9 @@
         </div>
       </section>
     {/if}
+
+    <!-- Non-invasive Bottom Version Footer -->
+    <VersionBadge variant="footer" />
   </main>
 
   <!-- Bottom Floating Glass Navigation Dock (Safe Area Bottom) -->
