@@ -1,0 +1,100 @@
+name: Mobile Build & OTA Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Extract App Version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "APP_TAG=v$VERSION" >> $GITHUB_ENV
+          echo "Detected version: v$VERSION"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Astro & Svelte 5 (Static SPA)
+        run: npm run build
+
+      - name: Package OTA Bundle (dist.zip)
+        run: node scripts/bundle-ota.js
+
+      - name: Setup Capacitor Android
+        run: |
+          if [ ! -d "android" ]; then
+            echo "📱 Adding Android platform to Capacitor project..."
+            npx cap add android
+          else
+            echo "📱 Android platform already present, syncing web assets..."
+            npx cap sync android
+          fi
+
+      - name: Build Android Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -x lint
+          cd ..
+          cp android/app/build/outputs/apk/debug/app-debug.apk ./app-debug.apk
+          echo "✅ APK generated at ./app-debug.apk"
+
+      - name: Publish GitHub Release with OTA Bundle & APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.APP_TAG }}
+          name: Release ${{ env.APP_TAG }}
+          body: |
+            ## Release ${{ env.APP_TAG }} 🚀
+
+            Compilación automatizada desde la rama `main`.
+
+            ### 📦 Artefactos de Despliegue:
+            - **`dist.zip`**: Bundle OTA para distribución Over-The-Air mediante Cloudflare Worker.
+            - **`app-debug.apk`**: Binario nativo Android para instalación directa en dispositivos de prueba.
+
+            ### 🔄 Canal OTA:
+            Los dispositivos existentes con este binario descargarán e instalarán automáticamente el bundle `dist.zip` sin pasar por la Play Store ni requerir reinstalación manual.
+          files: |
+            dist.zip
+            app-debug.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
