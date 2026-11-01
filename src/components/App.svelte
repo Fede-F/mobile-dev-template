@@ -196,7 +196,7 @@
             Canal conectado a Cloudflare Worker multi-tenant:
           </p>
           <div class="mt-2 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-cyan-300 break-all select-text">
-            mobile-ota-updater.fede-eagle.workers.dev?app={DEFAULT_APP_NAME}
+            mobile-ota-updater.fede-eagle.workers.dev/{DEFAULT_APP_NAME}/version
           </div>
         </div>
 

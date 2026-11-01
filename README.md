@@ -13,7 +13,7 @@ Template oficial de alto rendimiento para el desarrollo de aplicaciones móviles
 | **Estilos & FX** | [Tailwind CSS v4](https://tailwindcss.com/) | Safe areas dinámicas (`pt-safe`, `pb-safe`), glassmorphism y toque nativo |
 | **Runtime Nativo** | [Capacitor v8](https://capacitorjs.com/) | Acceso al hardware, Haptics, StatusBar, App Lifecycle |
 | **Actualizaciones OTA** | [@capgo/capacitor-updater](https://capgo.app/) | Actualizaciones instantáneas sin pasar por tiendas ni costes de servidores |
-| **Distribución Cloud** | [Cloudflare Workers](https://workers.cloudflare.com/) | Worker multi-tenant (`mobile-ota-updater.fede-eagle.workers.dev`) |
+| **Distribución Cloud** | [Cloudflare Workers](https://workers.cloudflare.com/) | Worker multi-tenant (`mobile-ota-updater.fede-eagle.workers.dev/:repo/version`) |
 | **CI / CD** | GitHub Actions | Compilación de `dist.zip`, generación de `app-debug.apk` y GitHub Releases automáticos |
 
 ---
@@ -42,9 +42,9 @@ Para adaptar el template a tu nueva app, modifica únicamente 3 archivos clave:
    ```
 
 2. **`src/lib/otaUpdater.js`**:
-   Configura el nombre único que consultará el Cloudflare Worker multi-tenant:
+   Configura el nombre exacto de tu repositorio en GitHub (el Cloudflare Worker multi-tenant usa la ruta `/:repo/version` y `/:repo/download`):
    ```javascript
-   export const DEFAULT_APP_NAME = 'tu-app-name'; // 👈 Nombre registrado en el Worker
+   export const DEFAULT_APP_NAME = 'nombre-exacto-del-repo'; // 👈 Debe coincidir con el nombre del repo en GitHub
    ```
 
 3. **`package.json`**:
@@ -92,10 +92,10 @@ sequenceDiagram
     
     Note over App: El usuario abre la app
     App->>App: notifyAppReady() [Previene Rollback]
-    App->>CF: GET /?app=tu-app-name&version=1.0.0
-    CF->>Rel: Consulta última versión disponible
-    CF-->>App: Retorna { version: '1.0.1', url: '.../dist.zip' }
-    App->>Rel: Descarga dist.zip en segundo plano
+    App->>CF: GET /<repo>/version
+    CF->>Rel: Consulta última versión disponible (con GITHUB_TOKEN)
+    CF-->>App: Retorna { version: 'v1.0.1', downloadUrl: '.../<repo>/download' }
+    App->>CF: Descarga dist.zip en segundo plano desde /<repo>/download
     App->>App: CapacitorUpdater.set({ id: '1.0.1' })
     Note over App: Listo para aplicar al reiniciar la app
 ```
@@ -137,56 +137,4 @@ Para enviar una actualización instantánea a todos los usuarios sin pasar por r
    git commit -m "feat: nueva mejora en la aplicación"
    git push origin main
    ```
-4. **Automático:** GitHub Actions compilará `dist.zip`, creará el Release con la nueva versión y el Cloudflare Worker distribuirá la actualización a todos los dispositivos en segundo plano.
-
----
-
-## ⚖️ Distinción Clave: ¿Cambio OTA o Nuevo APK/IPA?
-
-| Tipo de Modificación | ¿Viaja por OTA? | ¿Requiere Compilar Nuevo APK/IPA? |
-| :--- | :---: | :---: |
-| Pantallas, componentes Svelte, lógica JavaScript, CSS | ✅ **SÍ (Instantáneo)** | ❌ No |
-| Nuevas imágenes o assets web en `public/` o `src/` | ✅ **SÍ (Instantáneo)** | ❌ No |
-| Modificación de Iconos de Launcher (`assets/`) o Splash nativo | ❌ No | ✅ **SÍ (Obligatorio)** |
-| Nuevos plugins nativos de Capacitor (`npm i @capacitor/...`) | ❌ No | ✅ **SÍ (Obligatorio)** |
-| Permisos de Android en `AndroidManifest.xml` o iOS `Info.plist` | ❌ No | ✅ **SÍ (Obligatorio)** |
-| Configuraciones en `capacitor.config.ts` (`appId`, splash background) | ❌ No | ✅ **SÍ (Obligatorio)** |
-
----
-
-## 🏷️ Visualización de Versión y Diagnóstico OTA en la App
-
-El template incluye el componente reactivo [`src/components/VersionBadge.svelte`](file:///d:/Proyectos/Personal/Mobile-dev-template/src/components/VersionBadge.svelte) y el store reactivo `appVersion` desde `src/lib/otaUpdater.js`:
-
-- **Store Reactivo `appVersion`:** Puedes suscribirte en cualquier componente Svelte con `$appVersion` para obtener la versión activa actual en tiempo real.
-- **Modo `chip`:** Píldora sutil con indicador de estado (verde para versión al día, pulso para actualización lista) en cabeceras o toolbars.
-- **Modo `footer`:** Texto discreto en el pie de página de las pantallas (`v1.0.0 (OTA) • Tocar para info`).
-- **Modal de Diagnóstico:** Al pulsar sobre el badge, el usuario o tester puede ver si el código activo proviene de un bundle OTA o del binario base instalado, además de forzar una comprobación manual inmediata.
-
----
-
-## 📱 Probar en un Dispositivo Android Local
-
-1. Asegúrate de tener instalado **Android Studio** con Android SDK y Java JDK 21 o 17.
-2. Ejecuta:
-   ```bash
-   npm run cap:add:android  # Solo la primera vez
-   npm run cap:sync
-   npm run cap:open:android
-   ```
-3. En Android Studio, presiona **Run 'app'** con un emulador o un teléfono conectado por USB con depuración activada.
-
----
-
-## 📋 Checklist de Despliegue para Producción
-
-- [ ] ¿Se actualizó `appId` y `appName` en `capacitor.config.ts`?
-- [ ] ¿Se definió el identificador de la app en `DEFAULT_APP_NAME` en `src/lib/otaUpdater.js`?
-- [ ] ¿Están activos los permisos **Read and write permissions** en GitHub Actions?
-- [ ] ¿Incrementaste la versión en `package.json` (`npm run bump:patch`) antes de hacer push a `main`?
-- [ ] ¿Si agregaste un plugin nativo de Capacitor, compilaste e instalaste el nuevo APK en lugar de confiar solo en el OTA?
-
----
-
-## 🤖 Guía para Asistentes de IA
-Si estás utilizando herramientas con IA (Antigravity, Cursor, Claude, GitHub Copilot), consulta las directrices técnicas detalladas en el archivo [`AGENTS.md`](./AGENTS.md).
+4. **Automático:** GitHub Actions compilará `dist.zip`, creará el Release con la nueva versión y el Cloudflare Worker distribuirá la actualización a todos los dispositivos en segundo plano a través de `/:repo/version` y `/:repo/download`.

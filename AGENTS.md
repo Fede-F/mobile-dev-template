@@ -46,13 +46,23 @@ El proyecto es una **aplicación móvil híbrida de alto rendimiento** empaqueta
 - **Obligatorio:** Cada vez que la aplicación se monta en el cliente (`onMount` en `App.svelte`), se **debe** invocar `notifyAppReady()` desde `src/lib/otaUpdater.js`.
 - **Nunca** elimines ni pospongas la llamada a `notifyAppReady()`.
 
-### Flujo de Actualización en Segundo Plano
-1. Al abrir la app, tras `notifyAppReady()`, se ejecuta `checkForOtaUpdates()`.
-2. El cliente consulta al Cloudflare Worker con el nombre de la app y la versión actual:
-   `https://mobile-ota-updater.fede-eagle.workers.dev?app=<appName>&version=<version>`
-3. Si el worker indica que hay un release superior en GitHub, Capgo descarga el archivo `dist.zip`.
-4. El paquete se instala con `CapacitorUpdater.set()`.
-5. Gracias a la configuración `resetWhenUpdate: false` en `capacitor.config.ts`, la experiencia del usuario no se interrumpe; el nuevo código se activará en la siguiente apertura o cuando el usuario pulse "Reiniciar".
+### Flujo de Actualización en Segundo Plano y Contrato del Cloudflare Worker
+1. En `src/lib/otaUpdater.js`, la constante `DEFAULT_APP_NAME` **debe coincidir exactamente con el nombre del repositorio en GitHub** (bajo la cuenta `Fede-F`).
+2. Al abrir la app, tras `notifyAppReady()`, se ejecuta `checkForOtaUpdates()`.
+3. El cliente realiza una petición `GET` simple (sin headers personalizados como `Cache-Control` para evitar preflights `OPTIONS` de CORS) a la ruta del Cloudflare Worker:
+   - **Consulta de versión:** `GET https://mobile-ota-updater.fede-eagle.workers.dev/<repo>/version`
+   - **Respuesta JSON del Worker:**
+     ```json
+     {
+       "version": "v1.0.1",
+       "published_at": "2026-11-01T03:50:00Z",
+       "downloadUrl": "https://mobile-ota-updater.fede-eagle.workers.dev/<repo>/download"
+     }
+     ```
+   - **Descarga del bundle:** `GET https://mobile-ota-updater.fede-eagle.workers.dev/<repo>/download` (el Worker actúa como proxy autenticado con `GITHUB_TOKEN`, permitiendo repositorios tanto públicos como privados).
+4. El cliente normaliza el prefijo `v` (`replace(/^v/i, '')`) y, si la versión remota es distinta a la instalada, Capgo descarga el `dist.zip` desde `downloadUrl`.
+5. El paquete se instala con `CapacitorUpdater.set()`.
+6. Gracias a la configuración `resetWhenUpdate: false` en `capacitor.config.ts`, la experiencia del usuario no se interrumpe; el nuevo código se activará en la siguiente apertura o cuando el usuario pulse "Reiniciar".
 
 ### 🏷️ Visualización de Versión en la UI (No Invasiva)
 Para auditar la versión activa sin perjudicar la UX ni confundir al usuario final:
@@ -122,4 +132,4 @@ Para lanzar una actualización instantánea Over-The-Air que llegue a todos los 
    git commit -m "fix: mi nueva mejora en la app"
    git push origin main
    ```
-4. **Eso es todo:** GitHub Actions compilará automáticamente el proyecto, creará `dist.zip` y publicará el GitHub Release con el tag `v<version>`. El Cloudflare Worker multi-tenant detectará el nuevo release y los usuarios recibirán la actualización en segundo plano.
+4. **Eso es todo:** GitHub Actions compilará automáticamente el proyecto, creará `dist.zip` y publicará el GitHub Release con el tag `v<version>`. El Cloudflare Worker multi-tenant (`/:repo/version` y `/:repo/download`) detectará el nuevo release y los usuarios recibirán la actualización en segundo plano.

@@ -19,7 +19,7 @@ export const appVersion = writable(initialBuildVersion);
 
 /**
  * @typedef {Object} OtaConfig
- * @property {string} appName - Unique app identifier registered in the Cloudflare Worker
+ * @property {string} appName - Exact GitHub repository name queried by the Cloudflare Worker (/:repo/version)
  * @property {string} [workerBaseUrl] - URL of the Cloudflare Worker
  * @property {boolean} [autoReload] - Whether to reload immediately when a new update is downloaded
  * @property {number} [timeoutMs] - Request timeout in milliseconds
@@ -27,7 +27,8 @@ export const appVersion = writable(initialBuildVersion);
 
 /**
  * Default OTA configuration
- * Replace `DEFAULT_APP_NAME` or pass custom config in `initOta()`
+ * IMPORTANT: `DEFAULT_APP_NAME` must match the exact GitHub repository name (e.g. 'oboeru-mobile')
+ * so the Cloudflare Worker can resolve `GET /:repo/version` and `GET /:repo/download`.
  */
 export const DEFAULT_APP_NAME = 'mobile-dev-template';
 export const DEFAULT_WORKER_URL = 'https://mobile-ota-updater.fede-eagle.workers.dev';
@@ -192,7 +193,7 @@ export async function getCurrentAppVersion() {
 }
 
 /**
- * Check for updates against the Cloudflare Worker endpoint
+ * Check for updates against the Cloudflare Worker endpoint (GET /:repo/version)
  * 
  * @param {OtaConfig} [config]
  * @returns {Promise<{ updateAvailable: boolean, version?: string, bundleUrl?: string }>}
@@ -204,7 +205,7 @@ export async function checkForOtaUpdates(config = {}) {
   const timeoutMs = config.timeoutMs ?? 15000;
 
   if (!Capacitor.isNativePlatform()) {
-    console.log(`[OTA] Web preview mode. Simulating OTA check for app "${appName}"...`);
+    console.log(`[OTA] Web preview mode. Simulating OTA check for repo "${appName}"...`);
     updateState({ status: 'up-to-date', currentVersion: '1.0.0-web' });
     return { updateAvailable: false };
   }
@@ -216,18 +217,15 @@ export async function checkForOtaUpdates(config = {}) {
 
     console.log(`[OTA] Checking updates for "${appName}" (current: v${currentVersion})...`);
 
-    // Multi-tenant query: Worker receives app query param
-    const endpoint = `${workerBaseUrl}?app=${encodeURIComponent(appName)}&version=${encodeURIComponent(currentVersion)}`;
+    // Multi-tenant route matching Cloudflare Worker: GET /:repo/version
+    // Note: Keep as a simple GET request (no custom Cache-Control headers) to avoid CORS preflight
+    const endpoint = `${workerBaseUrl}/${encodeURIComponent(appName)}/version`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await fetch(endpoint, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache'
-      },
       signal: controller.signal
     });
 
@@ -240,16 +238,17 @@ export async function checkForOtaUpdates(config = {}) {
     const data = await response.json();
     console.log('[OTA] Worker response:', data);
 
-    // Expected worker format:
-    // { updateAvailable: true, version: '1.0.1', url: 'https://.../dist.zip', checksum: '...' }
-    // Or Capgo compatible direct format { version: '1.0.1', url: '...' }
-    const latestVersion = data.version || data.latestVersion;
-    const bundleUrl = data.url || data.bundleUrl;
+    // Worker returns:
+    // { version: 'v1.0.1', published_at: '...', downloadUrl: 'https://.../<repo>/download' }
+    const rawVersion = data.version || data.latestVersion || '';
+    const latestVersion = String(rawVersion).replace(/^v/i, '');
+    const currentClean = String(currentVersion).replace(/^v/i, '');
+    const bundleUrl = data.downloadUrl || data.url || data.bundleUrl;
 
-    if (!latestVersion || !bundleUrl || latestVersion === currentVersion) {
-      console.log(`[OTA] App is up to date (v${currentVersion}).`);
-      updateState({ status: 'up-to-date', availableVersion: currentVersion });
-      return { updateAvailable: false, version: currentVersion };
+    if (!latestVersion || !bundleUrl || latestVersion === currentClean) {
+      console.log(`[OTA] App is up to date (v${currentClean}).`);
+      updateState({ status: 'up-to-date', availableVersion: latestVersion || currentClean });
+      return { updateAvailable: false, version: currentClean };
     }
 
     console.log(`[OTA] 🚀 New update found: v${latestVersion}. Starting download...`);
