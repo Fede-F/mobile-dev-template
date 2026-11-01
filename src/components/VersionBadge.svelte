@@ -33,6 +33,7 @@
     status: 'idle',
     currentVersion: null,
     availableVersion: null,
+    error: null,
     updateReadyToApply: false
   });
 
@@ -52,7 +53,6 @@
 
   async function openDetails() {
     await hapticImpactLight();
-    // Refresh version info dynamically
     versionInfo = await getAppVersionInfo();
     showDetailsModal = true;
   }
@@ -78,7 +78,6 @@
 
 <!-- Render Variants -->
 {#if variant === 'chip'}
-  <!-- Subtle Header/Toolbar Chip -->
   <button
     type="button"
     onclick={openDetails}
@@ -95,7 +94,6 @@
   </button>
 
 {:else if variant === 'footer'}
-  <!-- Non-invasive Footer Link -->
   <footer class="w-full py-4 text-center select-none {customClass}">
     <button
       type="button"
@@ -117,7 +115,6 @@
   </footer>
 
 {:else}
-  <!-- Minimalist inline clickable text -->
   <button
     type="button"
     onclick={openDetails}
@@ -134,7 +131,6 @@
 {#if showDetailsModal}
   <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-5 animate-fade-in">
     <div class="glass-card max-w-sm w-full p-5 rounded-3xl border border-slate-700/80 space-y-4 shadow-2xl">
-      <!-- Modal Header -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2.5">
           <div class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs">
@@ -153,7 +149,6 @@
         </button>
       </div>
 
-      <!-- Info Specs -->
       <div class="space-y-2 bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800/80 text-xs">
         <div class="flex justify-between items-center">
           <span class="text-slate-400">Versión actual:</span>
@@ -185,9 +180,13 @@
           <span class="text-slate-400">Estado OTA:</span>
           <span class="capitalize text-slate-200 font-semibold">{otaState.status}</span>
         </div>
+        {#if otaState.error}
+          <div class="pt-1 text-[11px] text-rose-400 break-all">
+            Detalle: {otaState.error}
+          </div>
+        {/if}
       </div>
 
-      <!-- Action Buttons -->
       {#if otaState.updateReadyToApply}
         <button
           onclick={handleApply}
